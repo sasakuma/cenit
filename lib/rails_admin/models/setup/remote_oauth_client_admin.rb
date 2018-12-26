@@ -7,9 +7,10 @@ module RailsAdmin
         included do
           rails_admin do
             navigation_label 'Security'
-            label 'Remote Client'
+            label 'Remote OAuth Client'
             navigation_icon 'fa fa-user'
             weight 300
+            parent ::Setup::AuthorizationClient
             object_label_method { :custom_title }
 
             configure :tenant do

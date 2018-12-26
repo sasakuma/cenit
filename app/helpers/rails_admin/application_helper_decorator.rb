@@ -91,7 +91,7 @@ module RailsAdmin
         model_label: model_config && model_config.contextualized_label(label),
         model_label_plural: model_config && model_config.contextualized_label_plural(label),
         object_label: model_config && object.try(model_config.object_label_method),
-        )
+      )
     end
 
     def linking(model)
@@ -352,9 +352,28 @@ module RailsAdmin
             definitions_index = main_labels.length
           end
 
+          before_lis = ''
+          after_lis = ''
+          if label == 'Administration'
+            RailsAdmin::Config::Actions.all(:root).each do |action|
+              if (tail = action.admin_tail_link?) || action.admin_head_link?
+                link = %(
+                  <li>
+                    <a class='#{action.pjax? ? "pjax" : nil}' href='#{send(action.key.to_s + '_path')}'>
+                      <span class='text'>#{wording_for(:title, action)}</span>
+                    </a>
+                ).html_safe
+                if tail
+                  after_lis += link
+                else
+                  before_lis += link
+                end
+              end
+            end
+          end
           just_li = ecoindex == 0 || (@dashboard_group && @dashboard_group[:label] == label)
           nodes = nodes.select { |n| n.parent.nil? || !n.parent.to_s.in?(node_model_names) } if ecoindex > 0
-          li_stack = navigation(nodes_stack, nodes, collapse_id, just_li: just_li)
+          li_stack = navigation(nodes_stack, nodes, collapse_id, just_li: just_li, before_lis: before_lis, after_lis: after_lis)
 
           html_id = "main-#{label.underscore.gsub(' ', '-')}"
 
@@ -430,7 +449,7 @@ module RailsAdmin
     def navigation(nodes_stack, nodes, html_id, options = {})
       return if nodes.blank?
       i = -1
-      nav = nodes.collect do |node|
+      nav = options[:before_lis].to_s + nodes.collect do |node|
         i += 1
         stack_id = "#{html_id}-sub#{i}"
         origins =
@@ -598,7 +617,7 @@ module RailsAdmin
             </li>)
         end
         html
-      end.join
+      end.join + options[:after_lis].to_s
       nav = "<ul class='sub-menu'>#{nav}</ul>" unless options[:just_li]
       nav.html_safe
     end
@@ -658,32 +677,33 @@ module RailsAdmin
       target
     end
 
-    def subdomains_left_side_menu()
-      home_groups = RailsAdmin::Config.dashboard_groups
-      html = '<ul class="main-menu"><li><a href="' + dashboard_path + '"><i class="fa fa-tachometer fa-fw"></i><span class="text"> ' + 'Dashboard' + '</span></a>'
-      group = dashboard_root_group
-      home_groups.each_with_index do |g, index|
-        html += '<li class="' + (@dashboard_group && @dashboard_group[:param] == g[:param] ? 'active' : '') + '">
+    def subdomains_left_side_menu
+      with_cache_key(:subdomain_menu) do
+        home_groups = RailsAdmin::Config.dashboard_groups
+        html = '<ul class="main-menu"><li><a href="' + dashboard_path + '"><i class="fa fa-tachometer fa-fw"></i><span class="text"> ' + 'Dashboard' + '</span></a>'
+        home_groups.each_with_index do |g|
+          html += '<li class="' + (@dashboard_group && @dashboard_group[:param] == g[:param] ? 'active' : '') + '">
             <a href="" class="js-sub-menu-toggle"><i class="fa ' + g[:icon] + ' fa-fw"></i><span class="text"> ' + g[:label] + '</span>
               <i class="toggle-icon fa fa-angle-left"></i></a>'
-        models = g[:sublinks]
-        html += '<ul class="sub-menu ">'
-        html += "<li><a href='#{item_to_url(g)}'><span class='text'>Dashboard</span></a></li>"
-        unless models.empty?
-          models.each do |m|
-            if m.is_a?(Hash)
-              html += '<li><a id="' + "xsl_#{m[:label].underscore.gsub(' ', '_')}" + '" href="' + item_to_url(m) + '" target="' + open_in_new_tab(g, m[:param]) + '"><span class="text">' + m[:label] + '</span></a></li>'
-            elsif (abstract_model = (model = RailsAdmin::Config.model(m)).abstract_model)
-              model_url = url_for(action: :index, controller: 'rails_admin/main', model_name: abstract_model.to_param)
-              html += '<li><a id="' + "l_#{model.label_plural.underscore.gsub(' ', '_')}" + '"href="' + model_url + '" target="' + open_in_new_tab(g, m) + '"><span class="text">' + model.label_plural + '</span></a></li>'
+          models = g[:sublinks]
+          html += '<ul class="sub-menu ">'
+          html += "<li><a href='#{item_to_url(g)}'><span class='text'>Dashboard</span></a></li>"
+          unless models.empty?
+            models.each do |m|
+              if m.is_a?(Hash)
+                html += '<li><a id="' + "xsl_#{m[:label].underscore.gsub(' ', '_')}" + '" href="' + item_to_url(m) + '" target="' + open_in_new_tab(g, m[:param]) + '"><span class="text">' + m[:label] + '</span></a></li>'
+              elsif (abstract_model = (model = RailsAdmin::Config.model(m)).abstract_model)
+                model_url = url_for(action: :index, controller: 'rails_admin/main', model_name: abstract_model.to_param)
+                html += '<li><a id="' + "l_#{model.label_plural.underscore.gsub(' ', '_')}" + '"href="' + model_url + '" target="' + open_in_new_tab(g, m) + '"><span class="text">' + model.label_plural + '</span></a></li>'
+              end
             end
+            html += '</ul>'
           end
-          html += '</ul>'
+          html += '</li>'
         end
-        html += '</li>'
+        html += '</ul>'
+        html.html_safe
       end
-      html += '</ul>'
-      html.html_safe
     end
 
 
@@ -775,6 +795,12 @@ module RailsAdmin
     end
 
     def dashboard_data()
+      return compute_dashboard_data if %w(objects files ecommerce).include?(params[:group].to_s)
+      key = "dashboard_data_#{(params[:group].presence || 'dashboard').to_s.underscore}"
+      with_cache_user_key(key) { compute_dashboard_data }
+    end
+
+    def compute_dashboard_data
       nodes_stack = @model_configs.values.sort_by(&:weight)
       node_model_names = @model_configs.values.collect { |config| config.abstract_model.model_name }
 

@@ -2,7 +2,8 @@ Cenit::Application.routes.draw do
 
   devise_for :users, controllers: {
     sessions: 'sessions',
-    registrations: 'registrations'
+    registrations: 'registrations',
+    confirmations: 'confirmations'
   } do
     get 'sign_out', to: 'users/sessions#destroy', as: :destroy_user_session
   end
@@ -10,6 +11,7 @@ Cenit::Application.routes.draw do
   root to: 'rails_admin/main#dashboard'
   get ':group/dashboard', to: 'rails_admin/main#dashboard', as: :dashboard_group
   get 'dashboard', to: 'rails_admin/main#dashboard'
+  get 'terms', to: 'rails_admin/main#dashboard'
 
   get 'explore/:api', to: 'api#explore', as: :explore_api
   post 'write/:api', to: 'api#write', as: :write_api
@@ -39,9 +41,7 @@ Cenit::Application.routes.draw do
 
   match "#{oauth_path}/authorize", to: 'oauth#index', via: [:get, :post]
   get "#{oauth_path}/callback", to: 'oauth#callback'
-  if Cenit.oauth_token_end_point.to_s.to_sym == :embedded
-    mount Cenit::Oauth::Engine => oauth_path
-  end
+  post "#{oauth_path}/token", to: 'oauth#token'
 
   get 'captcha', to: 'captcha#index'
   get 'captcha/:token', to: 'captcha#index'
@@ -80,6 +80,7 @@ Cenit::Application.routes.draw do
       post '/:ns/:model/:id/pull', to: 'api#pull'
       post '/:ns/:model/:id/run', to: 'api#run'
       get '/:ns/:model/:id/retry', to: 'api#retry'
+      get '/:ns/:model/:id/authorize', to: 'api#authorize'
       get '/:ns/:model/:id/:view', to: 'api#content', defaults: { format: 'json' }
       match '/auth', to: 'api#auth', via: [:head]
       match '/*path', to: 'api#cors_check', via: [:options]
@@ -87,20 +88,21 @@ Cenit::Application.routes.draw do
 
     namespace :v3 do
       post '/setup/user', to: 'api#new_user'
-      post '/:ns/push', to: 'api#push'
-      post '/:ns/:model', to: 'api#new'
-      get '/:ns/:model', to: 'api#index', defaults: { format: 'json' }
-      get '/:ns/:model/:id', to: 'api#show', defaults: { format: 'json' }
-      post '/:ns/:model/:id', to: 'api#update'
-      post '/:ns/:model/:id/digest', to: 'api#digest'
-      delete '/:ns/:model/:id', to: 'api#destroy'
+      post '/:__ns_/:__model_', to: 'api#new'
+      get '/:__ns_/:__model_', to: 'api#index', defaults: { format: 'json' }
+      get '/:__ns_/:__model_/:__id_', to: 'api#show', defaults: { format: 'json' }
+      post '/:__ns_/:__model_/:__id_', to: 'api#update'
+      match '/:__ns_/:__model_/:__id_/digest', to: 'api#digest', via: [:get, :post]
+      match '/:__ns_/:__model_/:__id_/digest/*path', to: 'api#digest', via: [:get, :post]
+      delete '/:__ns_/:__model_/:__id_', to: 'api#destroy'
       match '/*path', to: 'api#cors_check', via: [:options]
     end
   end
 
-  match 'app/:id_or_ns' => 'app#index', via: [:all]
-  match 'app/:id_or_ns/:app_slug' => 'app#index', via: [:all]
-  match 'app/:id_or_ns/:app_slug/*path' => 'app#index', via: [:all]
+  match '/app/*path', to: 'app#cors_check', via: [:options]
+  match 'app/:id_or_ns' => 'app#index', via: ::Setup::Webhook::SYM_METHODS
+  match 'app/:id_or_ns/:app_slug' => 'app#index', via: ::Setup::Webhook::SYM_METHODS
+  match 'app/:id_or_ns/:app_slug/*path' => 'app#index', via: ::Setup::Webhook::SYM_METHODS
 
   get 'remote_shared_collection/:id', to: 'rails_admin/main#remote_shared_collection'
   get 'remote_shared_collection/:id/pull', to: 'rails_admin/main#remote_shared_collection'
@@ -117,4 +119,16 @@ Cenit::Application.routes.draw do
   match '/:model_name/:id/swagger/*path' => 'rails_admin/main#swagger', via: [:all]
 
   get '/:model_name/*id', to: 'rails_admin/main#show'
+
+  Cenit.options.keys.grep(/:route:draw:listener\Z/).each do |source_key|
+    if (listener = Cenit[source_key]).is_a?(String)
+      listener =
+        begin
+          Cenit[source_key].constantize
+        rescue
+          nil
+        end
+    end
+    listener && listener.try(:on_route_draw, self)
+  end
 end

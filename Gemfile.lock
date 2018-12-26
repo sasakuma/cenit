@@ -6,30 +6,19 @@ GIT
 
 GIT
   remote: https://github.com/cenit-io/cenit-home.git
-  revision: 1704c1ed3a1d54cd1f5f7e0a9a014b2f0070545f
+  revision: 497230877a070656dff869ca020ecc86b8ea7873
   specs:
     cenit-home (0.0.1.alpha)
       bootstrap-sass
 
 GIT
   remote: https://github.com/cenit-io/cenit-multi_tenancy.git
-  revision: 785ceaa35e634b8efe12757060818c97501163a8
+  revision: 93300d9a2f8b6528ce08e2484604d6be37db1209
   specs:
     cenit-multi_tenancy (0.0.1)
       cenit-config
-      glebtv_mongoid_userstamp
+      glebtv_mongoid_userstamp (~> 0.6.0)
       mongoid (>= 5.0.1)
-
-GIT
-  remote: https://github.com/cenit-io/cenit-oauth.git
-  revision: 7d13b95aaa9c18be0bc5e50a58c2c7ca73dac85e
-  specs:
-    cenit-oauth (0.0.1)
-      cenit-token
-      identicon
-      json-schema
-      jwt
-      rails (>= 4.2.5)
 
 GIT
   remote: https://github.com/cenit-io/cenit-service.git
@@ -45,7 +34,7 @@ GIT
 
 GIT
   remote: https://github.com/cenit-io/cenit-token.git
-  revision: c25d088a1be11c14ad26afca3518c2442aecac1c
+  revision: 0491f60c95f438b3fbedf343ba22aca8a4f22a08
   specs:
     cenit-token (0.0.1)
       mongoid (>= 5.0.1)
@@ -60,14 +49,14 @@ GIT
 
 GIT
   remote: https://github.com/macarci/cross_origin.git
-  revision: edb8b50ed02feece97c523cb2634bc50bca9ebee
+  revision: 0b0719488905177578ca3665fa36528543836688
   specs:
     cross_origin (0.0.3)
       mongoid (>= 5.0.1)
 
 GIT
   remote: https://github.com/macarci/mongoid-tracer.git
-  revision: bb74b75aa53f573ae42e70035bd7bc5ad8e8642e
+  revision: eca89bbc00ff5d1155bf7a790a01fc7cafd9de94
   specs:
     mongoid-tracer (0.0.1)
       mongoid (>= 5.0.1)
@@ -77,13 +66,6 @@ GIT
   revision: bf9ceea933fb88b5c8e0d3185b6eb875dd9187cf
   specs:
     origami (1.2.6)
-
-GIT
-  remote: https://github.com/openjaf/cenit_cmd.git
-  revision: b9f3ac98c6e082b2c1b25d74c7ecb55d00ee1511
-  specs:
-    cenit_cmd (0.0.6)
-      thor (~> 0.14)
 
 GIT
   remote: https://github.com/openjaf/rails_admin_dynamic_charts.git
@@ -211,7 +193,7 @@ GEM
     combine_pdf (1.0.4)
       ruby-rc4 (>= 0.1.5)
     commonjs (0.2.7)
-    concurrent-ruby (1.0.5)
+    concurrent-ruby (1.1.3)
     coveralls (0.8.9)
       json (~> 1.8)
       rest-client (>= 1.6.8, < 2)
@@ -227,8 +209,6 @@ GEM
       nokogiri (~> 1.6.0)
       polyglot
       rails (>= 3.1)
-    descendants_tracker (0.0.4)
-      thread_safe (~> 0.3, >= 0.3.1)
     descriptive_statistics (2.5.1)
     devise (3.5.2)
       bcrypt (~> 3.0)
@@ -255,25 +235,16 @@ GEM
     factory_girl_rails (4.5.0)
       factory_girl (~> 4.5.0)
       railties (>= 3.0.0)
-    faraday (0.9.2)
+    faraday (0.15.3)
       multipart-post (>= 1.2, < 3)
     ffaker (2.1.0)
-    ffi (1.9.23)
+    ffi (1.9.25)
     figaro (1.1.1)
       thor (~> 0.14)
     font-awesome-rails (4.6.2.0)
       railties (>= 3.2, < 5.1)
-    git (1.2.9.1)
-    github_api (0.12.4)
-      addressable (~> 2.3)
-      descendants_tracker (~> 0.0.4)
-      faraday (~> 0.8, < 0.10)
-      hashie (>= 3.4)
-      multi_json (>= 1.7.5, < 2.0)
-      nokogiri (~> 1.6.6)
-      oauth2
-    glebtv_mongoid_userstamp (0.6.0)
-      mongoid (>= 4.0.0, < 6.0)
+    glebtv_mongoid_userstamp (0.6.2)
+      mongoid (>= 4.0.0, < 6.1)
       request_store
     globalid (0.4.1)
       activesupport (>= 4.2.0)
@@ -290,8 +261,6 @@ GEM
       handlebars-source (~> 1.0.12)
       therubyracer (~> 0.12.0)
     handlebars-source (1.0.12)
-    hashie (3.4.3)
-    highline (1.7.8)
     html2haml (2.0.0)
       erubis (~> 2.7.0)
       haml (~> 4.0.0)
@@ -306,7 +275,7 @@ GEM
     httparty (0.13.7)
       json (~> 1.8)
       multi_xml (>= 0.5.2)
-    i18n (0.9.1)
+    i18n (0.9.5)
       concurrent-ruby (~> 1.0)
     identicon (0.0.5)
       chunky_png
@@ -316,15 +285,6 @@ GEM
       multi_json (~> 1.2)
     jeff (2.0.0)
       excon (>= 0.22.1)
-    jeweler (2.0.1)
-      builder
-      bundler (>= 1.0)
-      git (>= 1.2.5)
-      github_api
-      highline (>= 1.6.15)
-      nokogiri (>= 1.5.10)
-      rake
-      rdoc
     jmespath (1.3.1)
     jquery-rails (4.0.5)
       rails-dom-testing (~> 1.0)
@@ -335,7 +295,7 @@ GEM
     json (1.8.6)
     json-schema (2.5.1)
       addressable (~> 2.3.7)
-    jwt (1.5.2)
+    jwt (2.1.0)
     kaminari (0.16.3)
       actionpack (>= 3.0.0)
       activesupport (>= 3.0.0)
@@ -345,7 +305,7 @@ GEM
     liquid (4.0.0)
     lodash-rails (4.6.1)
       railties (>= 3.1)
-    loofah (2.2.2)
+    loofah (2.2.3)
       crass (~> 1.0.2)
       nokogiri (>= 1.5.9)
     mail (2.7.0)
@@ -356,7 +316,7 @@ GEM
     mini_magick (4.3.6)
     mini_mime (1.0.0)
     mini_portile2 (2.1.0)
-    minitest (5.10.3)
+    minitest (5.11.3)
     mongo (2.1.2)
       bson (~> 3.0)
     mongoid (5.0.1)
@@ -384,14 +344,12 @@ GEM
     nokogiri (1.6.8.1)
       mini_portile2 (~> 2.1.0)
     oauth (0.4.7)
-    oauth2 (1.0.0)
-      faraday (>= 0.8, < 0.10)
-      jwt (~> 1.0)
+    oauth2 (1.4.1)
+      faraday (>= 0.8, < 0.16.0)
+      jwt (>= 1.0, < 3.0)
       multi_json (~> 1.3)
       multi_xml (~> 0.5)
-      rack (~> 1.2)
-    octokit (4.1.1)
-      sawyer (~> 0.6.0, >= 0.5.3)
+      rack (>= 1.2, < 3)
     origin (2.1.1)
     orm_adapter (0.5.0)
     parser (2.3.1.4)
@@ -426,7 +384,7 @@ GEM
       prawn (>= 1.3.0, < 3.0.0)
     rabl (0.11.6)
       activesupport (>= 2.3.14)
-    rack (1.6.8)
+    rack (1.6.11)
     rack-pjax (0.8.0)
       nokogiri (~> 1.5)
       rack (~> 1.1)
@@ -445,12 +403,12 @@ GEM
       sprockets-rails
     rails-deprecated_sanitizer (1.0.3)
       activesupport (>= 4.2.0.alpha)
-    rails-dom-testing (1.0.8)
-      activesupport (>= 4.2.0.beta, < 5.0)
+    rails-dom-testing (1.0.9)
+      activesupport (>= 4.2.0, < 5.0)
       nokogiri (~> 1.6)
       rails-deprecated_sanitizer (>= 1.0.1)
-    rails-html-sanitizer (1.0.3)
-      loofah (~> 2.0)
+    rails-html-sanitizer (1.0.4)
+      loofah (~> 2.2, >= 2.2.2)
     rails_12factor (0.0.3)
       rails_serve_static_assets
       rails_stdout_logging
@@ -476,7 +434,7 @@ GEM
       rake (>= 0.8.7)
       thor (>= 0.18.1, < 2.0)
     raindrops (0.15.0)
-    rake (12.3.0)
+    rake (12.3.2)
     rb-fsevent (0.10.3)
     rb-inotify (0.9.10)
       ffi (>= 0.5.0, < 2)
@@ -485,7 +443,8 @@ GEM
       json
     ref (2.0.0)
     remotipart (1.3.1)
-    request_store (1.2.0)
+    request_store (1.4.1)
+      rack (>= 1.4)
     responders (2.1.0)
       railties (>= 4.2.0, < 5)
     rest-client (1.8.0)
@@ -525,20 +484,17 @@ GEM
     rubyzip (1.2.1)
     rufus-scheduler (3.1.9)
     safe_shell (1.1.0)
-    sass (3.5.6)
+    sass (3.7.2)
       sass-listen (~> 4.0.0)
     sass-listen (4.0.0)
       rb-fsevent (~> 0.9, >= 0.9.4)
       rb-inotify (~> 0.9, >= 0.9.7)
-    sass-rails (5.0.4)
-      railties (>= 4.0.0, < 5.0)
+    sass-rails (5.0.7)
+      railties (>= 4.0.0, < 6)
       sass (~> 3.1)
       sprockets (>= 2.8, < 4.0)
       sprockets-rails (>= 2.0, < 4.0)
       tilt (>= 1.1, < 3)
-    sawyer (0.6.0)
-      addressable (~> 2.3.5)
-      faraday (~> 0.8, < 0.10)
     sdoc (0.4.1)
       json (~> 1.7, >= 1.7.7)
       rdoc (~> 4.0)
@@ -555,7 +511,7 @@ GEM
     simplecov-html (0.10.0)
     spreadsheet (1.1.1)
       ruby-ole (>= 1.0)
-    sprockets (3.7.1)
+    sprockets (3.7.2)
       concurrent-ruby (~> 1.0)
       rack (> 1, < 3)
     sprockets-rails (3.2.1)
@@ -577,14 +533,13 @@ GEM
       rack (~> 1.0)
     thor (0.19.4)
     thread_safe (0.3.6)
-    tilt (2.0.6)
+    tilt (2.0.9)
     tins (1.6.0)
     ttfunk (1.4.0)
-    tzinfo (1.2.4)
+    tzinfo (1.2.5)
       thread_safe (~> 0.1)
-    uglifier (2.7.2)
-      execjs (>= 0.3.0)
-      json (>= 1.8.0)
+    uglifier (4.1.20)
+      execjs (>= 0.3.0, < 3)
     unf (0.1.4)
       unf_ext
     unf_ext (0.0.7.1)
@@ -635,10 +590,8 @@ DEPENDENCIES
   cenit-config!
   cenit-home!
   cenit-multi_tenancy!
-  cenit-oauth!
   cenit-service!
   cenit-token!
-  cenit_cmd!
   chartkick
   codemirror-rails
   coffee-rails
@@ -654,7 +607,6 @@ DEPENDENCIES
   factory_girl_rails
   ffaker
   figaro
-  github_api
   haml-rails
   handlebars
   httmultiparty
@@ -662,7 +614,6 @@ DEPENDENCIES
   identicon
   imgkit (= 1.6.1)
   jbuilder
-  jeweler
   jquery-rails
   json-schema
   language_sniffer
@@ -677,8 +628,7 @@ DEPENDENCIES
   net-sftp
   nokogiri
   oauth
-  oauth2 (= 1.0.0)
-  octokit
+  oauth2
   origami!
   parser
   pdf-forms (~> 1.1, >= 1.1.1)
@@ -719,4 +669,4 @@ RUBY VERSION
    ruby 2.2.1p85
 
 BUNDLED WITH
-   1.16.0
+   1.17.1

@@ -1,19 +1,12 @@
 module Setup
-  class BaseOauthProvider
-    include SharedEditable
-    include MandatoryNamespace
-    include ClassHierarchyAware
-    include BuildIn
+  class BaseOauthProvider < AuthorizationProvider
     include RailsAdmin::Models::Setup::BaseOauthProviderAdmin
-
-    origins origins_config, :cenit
 
     abstract_class true
 
     build_in_data_type.referenced_by(:namespace, :name)
 
     field :response_type, type: String
-    field :authorization_endpoint, type: String
     field :token_endpoint, type: String
     field :token_method, type: String
 
@@ -81,10 +74,13 @@ module Setup
     def default_refresh_token(authorization)
       if (refresh_token = authorization.refresh_token) &&
         (authorization.authorized_at.nil? || (authorization.authorized_at + (authorization.token_span || 0) < Time.now - 60))
-        fail 'Missing client configuration' unless authorization.client
+        fail 'Missing client configuration' unless (client = authorization.client)
         http_response = HTTMultiParty.post(
           authorization.token_endpoint,
-          headers: { 'Content-Type' => 'application/x-www-form-urlencoded' },
+          headers: {
+            'Content-Type' => 'application/x-www-form-urlencoded'
+          }.merge(client.conformed_request_token_headers(template_parameters = authorization.template_parameters_hash)),
+          query: client.conformed_request_token_parameters(template_parameters),
           body: {
             grant_type: :refresh_token,
             refresh_token: refresh_token,
@@ -94,12 +90,16 @@ module Setup
         )
         body = JSON.parse(http_response.body)
         if http_response.code == 200
-          authorization.update!(
+          update_data = {
             authorized_at: Time.now,
             token_type: body['token_type'],
             access_token: body['access_token'],
             token_span: body['expires_in']
-          )
+          }
+          if (refresh_token = body['refresh_token'])
+            update_data[:refresh_token] = refresh_token
+          end
+          authorization.update!(update_data)
         else
           fail "(response code #{http_response.code} - #{body['error']}) #{body['error_description']}"
         end

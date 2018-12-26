@@ -4,15 +4,16 @@ require 'mongoid_userstamp'
 
 class User
   include Setup::CenitUnscoped
-  include Cenit::Oauth::User
+  include Cenit::MultiTenancy::UserScope
   extend DeviseOverrides
   include CredentialsGenerator
   include FieldsInspection
   include TimeZoneAware
+  include ObserverTenantLookup
   include RailsAdmin::Models::UserAdmin
 
 
-  inspect_fields :name, :picture, :account_id, :api_account_id, :code_theme, :time_zone
+  inspect_fields :name, :given_name, :family_name, :picture, :account_id, :api_account_id, :code_theme, :time_zone
 
   rolify
 
@@ -28,9 +29,8 @@ class User
   # Include default devise modules. Others available are:
   # :lockable, :timeoutable, :rememberable
 
-  devise :trackable, :validatable, :database_authenticatable, :recoverable
+  devise :trackable, :validatable, :database_authenticatable, :recoverable, :confirmable
   devise :registerable unless ENV['UNABLE_REGISTERABLE'].to_b
-  devise :confirmable if ENV.has_key?('UNABLE_CONFIRMABLE') && !ENV['UNABLE_CONFIRMABLE'].to_b
 
   # Database authenticatable
   field :email, type: String, default: ''
@@ -57,6 +57,9 @@ class User
   #Profile
   mount_uploader :picture, ImageUploader
   field :name, type: String
+  field :given_name, type: String
+  field :family_name, type: String
+  field :picture_url, type: String
 
   #UI options
   field :code_theme, type: String
@@ -69,6 +72,9 @@ class User
 
   def check_attributes
     remove_attribute(:super_admin_enabled) unless has_role?(:super_admin)
+    if attributes['name'] && attributes['given_name'].present? && attributes['family_name'].present?
+      remove_attribute(:name)
+    end
     true
   end
 
@@ -98,7 +104,7 @@ class User
   before_save :check_attributes, :ensure_token, :validates_time_zone!, :check_account
 
   def check_account
-    unless super_admin? || accounts.where(id: account_id).exists? || member_account_ids.include?(account_id)
+    unless account_id.nil? || super_admin? || accounts.where(id: account_id).exists? || member_account_ids.include?(account_id)
       errors.add(:account, 'is not valid')
     end
     errors.blank?
@@ -108,8 +114,16 @@ class User
     (accounts + member_accounts).uniq
   end
 
+  def name
+    read_attribute(:name) || "#{given_name} #{family_name}".strip.presence
+  end
+
+  def short_name
+    given_name.presence || name.presence
+  end
+
   def picture_url(size = 50)
-    custom_picture_url(size) || gravatar_or_identicon_url(size)
+    custom_picture_url(size) || read_attribute(:picture_url) || gravatar_or_identicon_url(size)
   end
 
   def custom_picture_url(size)
@@ -178,7 +192,46 @@ class User
     @notification_spans[type]
   end
 
+  def avatar_id
+    email
+  end
+
+  def gravatar()
+    gravatar_check = "//gravatar.com/avatar/#{Digest::MD5.hexdigest(avatar_id.to_s.downcase)}.png?d=404"
+    uri = URI.parse(gravatar_check)
+    http = Net::HTTP.new(uri.host, uri.port)
+    request = Net::HTTP::Get.new("/avatar/#{Digest::MD5.hexdigest(avatar_id.to_s.downcase)}.png?d=404")
+    response = http.request(request)
+    response.code.to_i < 400 # from d=404 parameter
+  rescue
+    false
+  end
+
+  def identicon(size = 50)
+    Identicon.data_url_for avatar_id.to_s.downcase, size
+  end
+
+  def gravatar_or_identicon_url(size = 50)
+    if gravatar()
+      "//gravatar.com/avatar/#{Digest::MD5.hexdigest avatar_id.to_s}?s=#{size}"
+    else
+      identicon size
+    end
+  end
+
   class << self
+
+    def find_where(expression)
+      scope = all(expression)
+      unless current_super_admin?
+        scope = scope.and(id: current && current.id)
+      end
+      scope
+    end
+
+    def find_all
+      find_where({})
+    end
 
     def method_missing(symbol, *args)
       if (match = symbol.to_s.match(/\Acurrent_(.+)\?/))
@@ -205,4 +258,11 @@ class User
     end
   end
 
+  def confirmation_required?
+    ENV['CONFIRMATION_REQUIRED'].to_b &&
+      (super_method = method(__method__).super_method) &&
+      super_method.call
+  end
+
+  protected :confirmation_required?
 end

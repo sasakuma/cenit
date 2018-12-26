@@ -184,6 +184,10 @@ module Setup
         .reject! { |_, value| value.nil? }
       halt_anyway = false
       begin
+        if body.to_s.empty? && headers['Content-Type'] == 'application/x-www-form-urlencoded'
+          body = parameters.www_form_encode
+          query = nil
+        end
         conformed_path += '?' + query if query.present?
         url = conformed_url.gsub(%r{\/+\Z}, '') + ('/' + conformed_path).gsub(%r{\/+}, '/')
         template_parameters[:uri] ||= url
@@ -308,7 +312,7 @@ module Setup
           attachment: attachment,
           skip_notification_level: options[:skip_notification_level] || options[:notify_request]
         )
-        msg[:timeout] = remaining_request_time
+        #msg[:timeout] = remaining_request_time #TODO handle timeout
         begin
           uri = URI.parse(url)
           process_method = "process_#{uri.scheme}"
@@ -469,27 +473,17 @@ module Setup
       end
     end
 
+    METHODS = %W(GET POST PUT DELETE PATCH COPY OPTIONS LINK UNLINK PURGE LOCK UNLOCK HEAD LINK UNLINK PURGE LOCK UNLOCK PROPFIND)
+
+    SYM_METHODS = METHODS.map(&:downcase).map(&:to_sym)
+
     module ClassMethods
 
       def method_enum
-        [
-          :get,
-          :post,
-          :put,
-          :delete,
-          :patch,
-          :copy,
-          :head,
-          :options,
-          :link,
-          :unlink,
-          :purge,
-          :lock,
-          :unlock,
-          :propfind
-        ]
+        SYM_METHODS
       end
     end
+
 
     class HttpResponse
 

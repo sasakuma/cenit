@@ -31,6 +31,8 @@ en:
       short_submit: 'Reset'
       edit_title: 'Change your password'
       edit_submit: 'Change my password'
+    confirmation:
+      resend: 'Resend confirmation instructions'
     js:
       present_and_change: Present & Change
     flash:
@@ -75,6 +77,10 @@ en:
       powered_api_guru: 'API specs supplied by'
       refresh: 'Refresh'
     actions:
+      new:
+        doing: "persistence"
+      edit:
+        doing: "persistence"
       dashboard:
         title: "Dashboard"
         recent_users:
@@ -331,7 +337,7 @@ en:
         doing: 'pull'
         skip_pull_review: "Skipp pull review"
         skip_pull_review_help: "The pull will procede without warning about changes if checked"
-        client_property_description: "Your OAuth Client '%{client_name}' requires a non blank %{property} value to works correctly. You can configure the %{property} value later by editing the client record."
+        client_property_description: "Your Client '%{client_name}' might requires a non blank %{property} value to works correctly. You can configure the %{property} value later by editing the client record."
       retry_task:
         title: "Retry"
         menu: "Retry"
@@ -371,15 +377,12 @@ en:
         menu: "Delete"
         breadcrumb: "Delete"
         bulk_link: "Delete selected %{model_label_plural}"
+        doing: "deletion"
       process_flow:
         title: "Process"
         menu: "Process"
         done: "processed"
         doing: "execution"
-      build_gem:
-        title: "Build Gem"
-        menu: "Build Gem"
-        done: "build"
       run:
         title: "Run"
         menu: "Run"
@@ -578,6 +581,11 @@ en:
         title: "JSON Edit"
         menu: "JSON Edit"
         breadcrumb: "JSON Edit"
+      compare:
+        title: "Compare"
+        menu: "Compare"
+        breadcrumb: "Compare"
+        done: "merged"
     form:
       flow:
         source_data_type: 'Source data type'
@@ -772,11 +780,13 @@ en:
         read: '<strong>Read</strong> records from any data type'
         update: '<strong>Update</strong> records of any data type'
         delete: '<strong>Delete</strong> records from any data type'
+        digest: '<strong>Digest</strong> with records from any data type'
       access:
         create: '<strong>Create</strong> records of the following data types'
         read: '<strong>Read</strong> records from the following data types'
         update: '<strong>Update</strong> records of the following data types'
         delete: '<strong>Delete</strong> records of the following data types'
+        digest: '<strong>Digest</strong> with records of the following data types'
       auth: '<strong>Authorize</strong> other applications'
       auth_desc: 'The application will be able to authorize other applications with its same grants'
       offline_access: 'Acts <strong>in your behalf</strong>'

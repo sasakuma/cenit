@@ -10,7 +10,8 @@ module RailsAdmin
             navigation_icon 'fa fa-wrench'
             weight 310
             object_label_method { :custom_title }
-            label 'Provider'
+            label 'OAuth Provider'
+            visible false
 
             configure :_type do
               pretty_value do

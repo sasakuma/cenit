@@ -8,6 +8,10 @@ module Setup
 
     auth_template_parameters access_token: ->(oauth2_auth) { oauth2_auth.fresh_access_token }
 
+    def create_http_client(options = {})
+      super(options.merge(auth_scheme: :none))
+    end
+
     def token_params(params = {}, template_parameters = {})
       super
       sign_params(params, url: client.provider.token_endpoint, skip_access_token: true)
@@ -23,9 +27,7 @@ module Setup
       path.gsub!(/\A\/rest/, '')
       path.gsub!(/\/\Z/, '')
       self.class.sign_params(client, path, params)
-      if (template_parameters['notify_parameters'] || template_parameters_hash['notify_parameters']).to_b
-        Tenant.notify(message: params.to_json, type: :notice)
-      end
+      super
     end
 
     class << self

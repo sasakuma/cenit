@@ -192,25 +192,27 @@ module Setup
     def config_pull_parameters
       unless @config_pull_parameters
         @config_pull_parameters = []
-        clients = COLLECTING_PROPERTIES.detect { |p| reflect_on_association(p).klass == Setup::RemoteOauthClient }.to_s
-        (pull_data[clients] || []).each do |client_data|
-          client = Setup::RemoteOauthClient.new_from_json(client_data, add_only: true)
-          Cenit::Utility.bind_references(client)
-          if client.new_record? || ((current_user = User.current) && current_user.owns?(client.tenant))
-            %w(identifier secret).each do |property|
-              if client.send("get_#{property}").blank?
-                p = Setup::CrossCollectionPullParameter.new(
-                  _id: "config_#{@config_pull_parameters.size}",
-                  label: "OAuth Client '#{client.name}' #{property.capitalize}",
-                  type: 'string',
-                  required: false,
-                  description: I18n.t('admin.actions.pull.client_property_description', client_name: client.name, property: property)
-                )
-                p.properties_locations << Setup::PropertyLocation.new(
-                  property_name: property,
-                  location: { clients => client_data }
-                )
-                @config_pull_parameters << p
+        [Setup::RemoteOauthClient, Setup::GenericAuthorizationClient].each do |client_model|
+          clients = COLLECTING_PROPERTIES.detect { |p| reflect_on_association(p).klass == client_model }.to_s
+          (pull_data[clients] || []).each do |client_data|
+            client = client_model.new_from_json(client_data, add_only: true)
+            Cenit::Utility.bind_references(client)
+            if client.new_record? || ((current_user = User.current) && current_user.owns?(client.tenant))
+              %w(identifier secret).each do |property|
+                if client.send("get_#{property}").blank?
+                  p = Setup::CrossCollectionPullParameter.new(
+                    _id: "config_#{@config_pull_parameters.size}",
+                    label: "Client '#{client.name}' #{property.capitalize}",
+                    type: 'string',
+                    required: false,
+                    description: I18n.t('admin.actions.pull.client_property_description', client_name: client.name, property: property)
+                  )
+                  p.properties_locations << Setup::PropertyLocation.new(
+                    property_name: property,
+                    location: { clients => client_data }
+                  )
+                  @config_pull_parameters << p
+                end
               end
             end
           end
@@ -298,6 +300,8 @@ module Setup
         end
       end
 
+      collection.cross_to(origin, origin: :default)
+
       attributes = {}
       COLLECTING_PROPERTIES.each do |property|
         r = reflect_on_association(property)
@@ -333,10 +337,7 @@ module Setup
 
       self.installed = true
       self.skip_reinstall_callback = true
-      if save(add_dependencies: false)
-        collection.cross_to(origin, origin: :default)
-        true
-      end
+      save(add_dependencies: false)
     end
 
     def versioned_name
@@ -344,12 +345,6 @@ module Setup
     end
 
     def save(options = {})
-      @add_dependencies =
-        if options.key?(:add_dependencies)
-          options.delete(:add_dependencies)
-        else
-          @add_dependencies
-        end
       if (result = super)
         reinstall(add_dependencies: false) unless !installed? || skip_reinstall_callback
         self.skip_reinstall_callback = false

@@ -1,4 +1,3 @@
-require 'cenit_cmd/collection'
 
 module Cenit
   class Actions
@@ -8,9 +7,12 @@ module Cenit
 
         pull_parameters = options[:pull_parameters] || {}
         missing_parameters = []
-        shared_collection.each_pull_parameter do |pull_parameter|
-          if pull_parameter.required? && !pull_parameters.key?(param_id = pull_parameter.id.to_s)
-            missing_parameters << param_id
+        unless options[:ignore_missing_parameters]
+          shared_collection.each_pull_parameter do |pull_parameter|
+            param_id = pull_parameter.id.to_s
+            if pull_parameter.required? && !pull_parameters.key?(param_id)
+              missing_parameters << param_id
+            end
           end
         end
 
@@ -199,7 +201,7 @@ module Cenit
                 Setup::Collection.where(name: shared_collection.name).delete
                 collection.name = shared_collection.name
                 collection.image = shared_collection.image if shared_collection.image.present?
-                collection.save
+                collection.save(add_dependencies: false)
                 shared_collection.pulled(collection: collection,
                                          install: pull_request[:install])
                 pull_request[:collection] = { id: collection.id.to_s }
@@ -219,63 +221,6 @@ module Cenit
           end
         end
         pull_request
-      end
-
-      def build_gem(shared_collection)
-        data =
-          {
-            summary: shared_collection.summary,
-            description: shared_collection.description,
-            homepage: Cenit.homepage
-          }.merge(shared_collection.to_hash).with_indifferent_access
-
-        CenitCmd::Collection.new.build_gem(data)
-      end
-
-      def build_collection(source, klass)
-        if source.nil? || source.is_a?(Array) # bulk share
-          klass = klass.to_s.constantize unless klass.is_a?(Class)
-          collection = Setup::Collection.new
-          collection.send("#{klass.to_s.split('::').last.downcase.pluralize}=", source ? klass.any_in(id: source) : klass.all)
-        else # simple share
-          if source.is_a?(Setup::Collection)
-            collection = source
-          else
-            collection = Setup::Collection.new(name: @object.try(:name))
-            collection.send("#{source.class.to_s.split('::').last.downcase.pluralize}") << source
-          end
-        end
-        collection.add_dependencies
-        collection
-      end
-
-      def store(shared_collection)
-        return false unless shared_collection.save
-        if Cenit.share_on_github
-          file_name, gem = Cenit::Actions.build_gem(shared_collection)
-          file = Tempfile.new(file_name)
-          file.binmode
-          file.write(gem)
-          file.rewind
-
-
-          obj = GemSynchronizer.new Cenit.github_shared_collections_home,
-                                    {
-                                      login: Cenit.github_shared_collections_user,
-                                      password: Cenit.github_shared_collections_pass
-                                    }
-          begin
-            obj.github_update! file
-          rescue Exception => ex
-            Setup::SystemNotification.create_from(ex)
-          end
-
-          file.close
-        end
-        if Cenit.share_on_ruby_gems
-
-        end
-        true
       end
 
       private

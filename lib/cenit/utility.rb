@@ -36,7 +36,7 @@ module Cenit
           if save_references(record, options, saved) && record.save(options)
             true
           else
-            for_each_node_starting_at(record, stack: stack=[]) do |obj|
+            for_each_node_starting_at(record, stack: stack = []) do |obj|
               obj.errors.each do |attribute, error|
                 attr_ref = "#{obj.orm_model.data_type.title}" +
                   ((name = obj.try(:name)) || (name = obj.try(:title)) ? " #{name} on attribute " : "'s '") +
@@ -68,17 +68,23 @@ module Cenit
         options ||= {}
         references = {}
         for_each_node_starting_at(record, options) do |obj|
-          if (record_refs = obj.instance_variable_get(:@_references))
+          ::Setup::Optimizer.instance.regist_data_types(obj)
+          if (record_refs = obj.instance_variable_get(:@_references)).present?
             references[obj] = record_refs
           end
         end
 
-        visited = options.delete(:visited)
+        visited = options[:visited]
+        bound_records = []
+
+        lazy_models = [Setup::MappingConverter]
 
         while_modifying references do
+
           while_modifying references do
-            visited.each do |obj|
-              references.each do |obj_waiting, to_bind|
+            references.each do |obj_waiting, to_bind|
+              next if lazy_models.include?(obj_waiting.class)
+              visited.each do |obj|
                 to_bind.each do |property_name, property_binds|
                   is_array = property_binds.is_a?(Array) ? true : (property_binds = [property_binds]; false)
                   property_binds.each do |property_bind|
@@ -95,13 +101,17 @@ module Cenit
                     end
                     to_bind.delete(property_name) if property_binds.empty?
                   end
-                  references.delete(obj_waiting) if to_bind.empty?
+                  if to_bind.empty?
+                    bound_records << obj_waiting
+                    references.delete(obj_waiting)
+                  end
                 end
               end
             end
           end
 
           references.each do |obj, to_bind|
+            next if lazy_models.include?(obj.class)
             to_bind.each do |property_name, property_binds|
               is_array = property_binds.is_a?(Array) ? true : (property_binds = [property_binds]; false)
               property_binds.each do |property_bind|
@@ -127,17 +137,45 @@ module Cenit
               end
               to_bind.delete(property_name) if property_binds.empty?
             end
-            references.delete(obj) if to_bind.empty?
+            if to_bind.empty?
+              bound_records << obj
+              references.delete(obj)
+            end
           end
+
+          do_it = nil
+
+
+          if bound_records.empty?
+            if lazy_models.present?
+              lazy_models.shift
+              do_it = :again
+            end
+          else
+            bound_records.each do |record|
+              visited.delete(record)
+              for_each_node_starting_at(record, options) do |obj|
+                if (record_refs = obj.instance_variable_get(:@_references)).present?
+                  references[obj] = record_refs
+                end
+              end
+            end
+            bound_records.clear
+            do_it = :again
+          end
+
+          do_it
         end
+        options.delete(:visited)
         record.errors.blank?
       end
 
       def while_modifying(hash)
+        do_it = nil
         start_size = hash.size + 1
-        while hash.present? && hash.size < start_size
+        while do_it == :again || (hash.present? && hash.size < start_size)
           start_size = hash.size
-          yield
+          do_it = yield
         end
       end
 
@@ -193,9 +231,27 @@ module Cenit
       end
 
       def save_references(record, options, saved, visited = Set.new)
-        return true if !record.changed? || visited.include?(record)
+        return true if visited.include?(record)
         visited << record
-        if (model = record.try(:orm_model))
+        if record.is_a?(Setup::Collection)
+          Setup::Collection::COLLECTING_PROPERTIES.each do |property|
+            record.send(property).each do |value|
+              next unless visited.exclude?(value) && value.changed?
+              new_record = value.new_record?
+              if value.save(options)
+                if new_record || value.instance_variable_get(:@dynamically_created)
+                  value.instance_variable_set(:@dynamically_created, true)
+                  options[:create_collector] << value if options[:create_collector]
+                else
+                  options[:update_collector] << value if options[:update_collector]
+                end
+                saved << value
+              else
+                return false
+              end
+            end
+          end
+        elsif (model = record.try(:orm_model))
           model.for_each_association do |relation|
             next if Setup::BuildInDataType::EXCLUDED_RELATIONS.include?(relation[:name].to_s)
             if (values = record.send(relation[:name]))
@@ -292,12 +348,20 @@ module Cenit
           rescue
             nil
           end
+        new_criteria = {}
         criteria.each do |key, value|
           if (a = associations[key])
             criteria.delete(key)
-            criteria[a.foreign_key] = { '$in' => associated_ids(a, key => value) }
+            a_criteria =
+              if a == association
+                value
+              else
+                { key => value }
+              end
+            new_criteria[a.foreign_key] = { '$in' => associated_ids(a, a_criteria) }
           end
         end if associations
+        criteria.merge!(new_criteria)
         association.klass.where(criteria).collect(&:id)
       end
 

@@ -23,7 +23,6 @@ require 'rails_admin/config_decorator'
   RailsAdmin::Config::Actions::RetryTask,
   RailsAdmin::Config::Actions::DownloadFile,
   RailsAdmin::Config::Actions::ProcessFlow,
-  RailsAdmin::Config::Actions::BuildGem,
   RailsAdmin::Config::Actions::Run,
   RailsAdmin::Config::Actions::Authorize,
   RailsAdmin::Config::Actions::SimpleDeleteDataType,
@@ -72,7 +71,8 @@ require 'rails_admin/config_decorator'
   RailsAdmin::Config::Actions::CollectionTraceIndex,
   RailsAdmin::Config::Actions::DataTypeConfig,
   RailsAdmin::Config::Actions::JsonEdit,
-  RailsAdmin::Config::Actions::Sudo
+  RailsAdmin::Config::Actions::Sudo,
+  RailsAdmin::Config::Actions::Compare
 ].each { |a| RailsAdmin::Config::Actions.register(a) }
 
 [
@@ -104,7 +104,8 @@ RailsAdmin::Config::Actions.register(:export, RailsAdmin::Config::Actions::BulkE
   RailsAdmin::Config::Fields::Types::ContextualBelongsTo,
   RailsAdmin::Config::Fields::Types::SortReverseString,
   RailsAdmin::Config::Fields::Types::AutoComplete,
-  RailsAdmin::Config::Fields::Types::ToggleBoolean
+  RailsAdmin::Config::Fields::Types::ToggleBoolean,
+  RailsAdmin::Config::Fields::Types::CodeWarnings
 ].each { |f| RailsAdmin::Config::Fields::Types.register(f) }
 
 require 'rails_admin/config/fields/factories/tag'
@@ -202,7 +203,7 @@ module RailsAdmin
               label: 'Security',
               icon: 'fa fa-shield',
               externals: [],
-              sublinks: %w(Setup::RemoteOauthClient Setup::BaseOauthProvider Setup::Oauth2Scope Setup::Authorization Cenit::OauthAccessGrant )
+              sublinks: %w(Setup::AuthorizationClient Setup::AuthorizationProvider Setup::Oauth2Scope Setup::Authorization Cenit::OauthAccessGrant )
             }
           ]
           @dashboard_groups.select { |g| g[:param] == 'compute' }.each do |g|
@@ -337,9 +338,17 @@ RailsAdmin.config do |config|
 
   config.navigation 'Security', icon: 'fa fa-shield'
 
+  Setup::AuthorizationClient
+
+  Setup::GenericAuthorizationClient
+
   Setup::OauthClient
 
   Setup::RemoteOauthClient
+
+  Setup::AuthorizationProvider
+
+  Setup::GenericAuthorizationProvider
 
   Setup::BaseOauthProvider
 
@@ -355,9 +364,13 @@ RailsAdmin.config do |config|
 
   Setup::BasicAuthorization
 
+  Setup::GenericCallbackAuthorization
+
   Setup::OauthAuthorization
 
   Setup::Oauth2Authorization
+
+  Setup::AppAuthorization
 
   Setup::LazadaAuthorization
 
@@ -522,6 +535,8 @@ RailsAdmin.config do |config|
 
   Setup::Storage
 
+  Setup::AsynchronousPersistence
+
   #Configuration
 
   config.navigation 'Configuration', icon: 'fa fa-sliders'
@@ -568,6 +583,8 @@ RailsAdmin.config do |config|
 
   Setup::SystemReport
 
+  ActiveTenant
+
   RabbitConsumer
 
   Cenit::ApplicationId
@@ -612,7 +629,6 @@ RailsAdmin.config do |config|
     share
     simple_cross
     bulk_cross
-    build_gem
     pull
     push
     download_file
@@ -641,6 +657,7 @@ RailsAdmin.config do |config|
     simple_delete_data_type
     bulk_delete_data_type
     collect
+    compare
     delete
     trash
     notebooks_root if Cenit.jupyter_notebooks

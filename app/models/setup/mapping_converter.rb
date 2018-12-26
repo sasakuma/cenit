@@ -10,6 +10,20 @@ module Setup
 
     validates_presence_of :target_data_type, :map_attributes
 
+    before_save :catch_map_attributes
+
+    def catch_map_attributes
+      if @mapping
+        if @mapping.is_a?(Hash)
+          self.map_attributes = @mapping
+          @mapping = nil
+        else
+          self.map_attributes = @mapping.attributes
+        end
+      end
+      errors.blank?
+    end
+
     def execute(options)
       options[:target] = do_map(options[:source])
     end
@@ -22,7 +36,7 @@ module Setup
           if v.present? && map_model.property?(k)
             if map_model.associations[k]
               if v.is_a?(Hash)
-                v.delete_if { |sub_k, sub_v| %w(source transformation_id options).exclude?(sub_k.to_s) || !sub_v.is_a?(String) || sub_v.blank? }
+                v.delete_if { |sub_k, sub_v| %w(source transformation_id options).exclude?(sub_k.to_s) || !(sub_v.is_a?(String) || sub_v.is_a?(BSON::ObjectId)) || sub_v.blank? }
                 value.delete(k) if v.empty?
               else
                 value.delete(k)
@@ -161,12 +175,7 @@ module Setup
       end
       if source_data_type && target_data_type
         @mapping = map_model.new_from_json(data)
-        if @mapping.is_a?(Hash)
-          self.map_attributes = @mapping
-          @mapping = nil
-        else
-          self.map_attributes = @mapping.attributes
-        end
+        catch_map_attributes
         @lazy_mapping = nil
       else
         @lazy_mapping = data
@@ -358,7 +367,8 @@ module Setup
           source_model = source_data_type.records_model
           titles = Set.new
           source_model.properties.each do |property|
-            property_dt = source_model.property_model(property).data_type
+            next unless (property_model = source_model.property_model(property))
+            property_dt = property_model.data_type
             unless property_dt == source_data_type
               enum << property
               title = property_dt.schema['title'] || property.to_title

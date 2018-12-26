@@ -9,9 +9,6 @@ module RailsAdmin
             navigation_label 'Security'
             weight 333
             label 'Lazada Authorization'
-            register_instance_option :label_navigation do
-              'OAuth 2.0'
-            end
             object_label_method { :custom_title }
             parent ::Setup::Oauth2Authorization
             visible false

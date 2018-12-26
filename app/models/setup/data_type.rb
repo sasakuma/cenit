@@ -43,7 +43,7 @@ module Setup
 
     def validates_configuration
       invalid_algorithms = []
-      before_save_callbacks.each { |algorithm| invalid_algorithms << algorithm unless algorithm.parameters.count == 1 }
+      before_save_callbacks.each { |algorithm| invalid_algorithms << algorithm unless algorithm.parameters.size == 1 }
       if invalid_algorithms.present?
         errors.add(:before_save_callbacks, "algorithms should receive just one parameter: #{invalid_algorithms.collect(&:custom_title).to_sentence}")
       end
@@ -51,7 +51,7 @@ module Setup
         by_name = Hash.new { |h, k| h[k] = 0 }
         send(methods).each do |method|
           by_name[method.name] += 1
-          if method.parameters.count == 0
+          if method.parameters.size == 0
             errors.add(methods, "contains algorithm taking no parameter: #{method.custom_title} (at less one parameter is required)")
           end
         end
@@ -122,7 +122,19 @@ module Setup
         nil
     end
 
-    RECORDS_MODEL_METHODS = %w(where all count only).collect(&:to_sym)
+    RECORDS_MODEL_METHODS = %w(count only).collect(&:to_sym)
+
+    def where(expression, &block)
+      if records_model.respond_to?(:find_where)
+        records_model.find_where(expression, &block)
+      else
+        records_model.where(expression, &block)
+      end
+    end
+
+    def all(expression = {}, &block)
+      where(expression, &block)
+    end
 
     def respond_to?(*args)
       symbol = args[0]
@@ -141,22 +153,6 @@ module Setup
       else
         super
       end
-    end
-
-    def digest(data, options = {})
-      unless data.is_a?(Hash)
-        data = data.to_s
-        data = data.blank? ? nil : JSON.parse(data.to_s)
-      end
-      data = data ? merge_schema(data, options) : merged_schema(options)
-      {
-        json: data
-      }
-    rescue Exception => ex
-      {
-        json: { error: ex.message },
-        status: :bad_request
-      }
     end
 
     class << self

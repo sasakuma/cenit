@@ -2,7 +2,7 @@ module Setup
   class Application < OauthClient
     include NamespaceNamed
     include Slug
-    include Cenit::Oauth::AppConfig
+    include Cenit::AppConfig
     include RailsAdmin::Models::Setup::ApplicationAdmin
 
     origins :app
@@ -16,8 +16,11 @@ module Setup
 
     accepts_nested_attributes_for :actions, :application_parameters, allow_destroy: true
 
-    before_validation do
-      self.provider_id = Setup::Oauth2Provider.build_in_provider_id
+    after_initialize :bind_provider
+    before_validation :bind_provider
+
+    def bind_provider
+      self.provider_id = Setup::Oauth2Provider.build_in_provider_id unless provider_id == Setup::Oauth2Provider.build_in_provider_id
     end
 
     def validates_configuration

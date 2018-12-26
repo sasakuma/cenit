@@ -6,6 +6,7 @@ class Account
   include CredentialsGenerator
   include FieldsInspection
   include TimeZoneAware
+  include ObserverTenantLookup
   include RailsAdmin::Models::AccountAdmin
 
   DEFAULT_INDEX_MAX_ENTRIES = 100
@@ -153,8 +154,10 @@ class Account
 
   def clean_up
     switch do
-      Cenit::ApplicationId.where(:id.in => Cenit::Oauth.app_model.all.collect(&:application_id_id)).delete_all
+      Cenit::ApplicationId.where(:id.in => Setup::Application.all.collect(&:application_id_id)).delete_all
     end
+    TaskToken.where(tenant_id: id).delete_all
+    Setup::DelayedMessage.where(tenant_id: id).delete_all
     each_tenant_collection(&:drop)
   end
 
@@ -167,10 +170,44 @@ class Account
       Cenit[:"default_#{type}_notifications_span"] || 1.hour
   end
 
+  def owner_switch(&block)
+    current_user = User.current
+    User.current = owner
+    switch(&block)
+  ensure
+    User.current = current_user
+  end
+
+  def get_owner
+    fail 'Illegal access to tenant owner' unless User.current_super_admin?
+    owner
+  end
+
   class << self
+
+    def find_where(expression)
+      scope = all(expression)
+      unless User.current_super_admin?
+        user_id = (user = User.current) && user.id
+        member_account_ids = user && user.member_account_ids
+        scope = scope.and({ '$or' => [
+          { 'owner_id' => user_id },
+          { '_id' => { '$in' => member_account_ids || [] } }
+        ] })
+      end
+      scope
+    end
+
+    def find_all
+      find_where({})
+    end
 
     def notify(attrs)
       current && current.notify(attrs)
+    end
+
+    def current_id
+      current && current.id
     end
 
     def current_key

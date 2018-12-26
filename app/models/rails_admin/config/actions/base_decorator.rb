@@ -3,6 +3,14 @@ module RailsAdmin
     module Actions
       Base.class_eval do
 
+        register_instance_option :admin_tail_link? do
+          false
+        end
+
+        register_instance_option :admin_head_link? do
+          false
+        end
+
         def self.loading_member
           yield
         end
@@ -24,8 +32,13 @@ module RailsAdmin
           opts[:action] ||= action_name
           opts[:controller] ||= 'rails_admin/main'
           opts[:model_name] ||= bindings[:abstract_model].try(:to_param)
-          opts[:id] ||=  ((object = bindings[:object]) && object.try(:persisted?) && object.try(:id)) || nil
+          opts[:id] ||= ((object = bindings[:object]) && object.try(:persisted?) && object.try(:id)) || nil
           opts
+        end
+
+        def enabled_for(model)
+          (only.nil? || [only].flatten.collect(&:to_s).include?(model.to_s)) &&
+            [except].flatten.collect(&:to_s).exclude?(model.to_s)
         end
       end
     end

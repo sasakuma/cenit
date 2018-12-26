@@ -1,7 +1,7 @@
 class AppController < ApplicationController
 
-  before_action :authorize_account, :find_app, :find_app_control_action
   before_action :process_headers
+  before_action :authorize_account, :find_app, :find_app_control_action, except: :cors_check
 
   attr_reader :app_control
 
@@ -13,11 +13,20 @@ class AppController < ApplicationController
     render plain: ex.message, status: :internal_server_error if @app_control && !@app_control.done?
   end
 
+  def cors_check
+    process_headers
+    render nothing: true
+  end
+
   protected
 
   def process_headers
-    response.headers.delete('X-Frame-Options')
-    response.headers['Access-Control-Allow-Origin'] = request.headers['Origin'] || ::Cenit.homepage
+    headers.delete('X-Frame-Options')
+    headers['Access-Control-Allow-Origin'] = request.headers['Origin'] || ::Cenit.homepage
+    headers['Access-Control-Allow-Credentials'] = false
+    headers['Access-Control-Allow-Headers'] = request.headers['Access-Control-Request-Headers'] || '*'
+    headers['Access-Control-Allow-Methods'] = request.headers['Access-Control-Request-Method'] || Setup::Webhook::METHODS.join(',')
+    headers['Access-Control-Max-Age'] = '1728000'
   end
 
   def find_app_control_action

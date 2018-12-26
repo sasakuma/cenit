@@ -25,7 +25,9 @@ module RailsAdmin
             active true
           end
 
-          configure :name
+          configure :name, :string
+          configure :given_name, :string
+          configure :family_name, :string
           configure :email
           configure :code_theme
           configure :roles
@@ -46,9 +48,6 @@ module RailsAdmin
             read_only { !::User.current_super_admin? }
           end
           configure :password do
-            group :credentials
-          end
-          configure :password_confirmation do
             group :credentials
           end
           configure :key do
@@ -78,7 +77,8 @@ module RailsAdmin
 
           edit do
             field :picture
-            field :name
+            field :given_name
+            field :family_name
             field :code_theme
             field :email do
               visible { ::User.current_super_admin? }
@@ -99,9 +99,6 @@ module RailsAdmin
               visible { ::User.current_super_admin? }
             end
             field :password do
-              visible { ::User.current_super_admin? }
-            end
-            field :password_confirmation do
               visible { ::User.current_super_admin? }
             end
             field :key do
@@ -156,14 +153,12 @@ module RailsAdmin
           end
 
           list do
-            field :picture do
-              thumb_method :icon
-            end
             field :name
+            field :given_name
+            field :family_name
             field :email
             field :time_zone
             field :account
-            field :roles
             field :sign_in_count
             field :created_at
           end

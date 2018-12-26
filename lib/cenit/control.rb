@@ -80,6 +80,12 @@ module Cenit
       args[0].to_s =~ /\Arender_.+\Z/ || super
     end
 
+    def respond_to(&block)
+      @controller.respond_to do |format|
+        block.call(format)
+      end
+    end
+
     def render_called?
       @render_called ||= false
     end
@@ -108,12 +114,13 @@ module Cenit
       redirect_to_called? || render_called?
     end
 
-    def authorize(auth)
+    def authorize(auth, parameters = {})
       case auth
-      when Setup::BaseOauthAuthorization
-        if auth.check
-          cenit_token = OauthAuthorizationToken.create(application: app, authorization: auth, data: {})
-          auth_url = auth.authorize_url(cenit_token: cenit_token)
+      when Setup::CallbackAuthorization
+        if auth.save
+          cenit_token = CallbackAuthorizationToken.create(app_id: app.application_id, authorization: auth, data: {})
+          parameters[:cenit_token] = cenit_token
+          auth_url = auth.authorize_url(parameters)
           cenit_token.save
           controller.session[:oauth_state] = cenit_token.token
           redirect_to auth_url
@@ -145,17 +152,22 @@ module Cenit
       set_instance_var(key, value)
     end
 
-    def access_token_for(auth)
-      fail "Invalid authorization class: #{auth.class}" unless auth.is_a?(Setup::Oauth2Authorization)
-      unless (app_id = Cenit::ApplicationId.where(identifier: auth.client && auth.client.get_identifier).first)
-        fail "Invalid authorization client: #{auth.client.custom_title}"
+    def generate_access_token(options = {})
+      unless (app_id = app.application_id)
+        fail 'Invalid App, the app identifier ref is broken!'
       end
-      scope = auth.scopes.collect { |scope| Cenit::OauthScope.new(scope.name) }.inject(&:merge)
-      if scope.valid? && scope.auth?
-        Cenit::OauthAccessToken.for(app_id, scope, User.current)
+      unless (access_grant = Cenit::OauthAccessGrant.where(application_id_id: app_id.id).first)
+        fail 'No access granted for this App'
+      end
+      unless (oauth_scope = access_grant.oauth_scope).auth?
+        fail 'Granted access does not include the auth scope'
+      end
+      fail 'Granted access does not include the offline_access scope' unless oauth_scope.offline_access?
+      if options[:session_token]
+        Cenit::OauthSessionAccessToken
       else
-        fail 'Invalid authorization scope'
-      end
+        Cenit::OauthAccessToken
+      end.for(app_id, access_grant.scope, User.current)
     end
 
     def xhr?
@@ -283,6 +295,10 @@ module Cenit
 
     def response_headers
       @controller.response.headers
+    end
+
+    def session
+      @controller.session
     end
 
     private
